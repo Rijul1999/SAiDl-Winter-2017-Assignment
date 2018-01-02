@@ -7,6 +7,7 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms 
 import numpy as np
 
+# Encoder network to convert the input image into a feature map
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder,self).__init__()
@@ -47,6 +48,7 @@ class Encoder(nn.Module):
 encoder = Encoder()
 
 
+#Decoder network to convert the feature map back into the input image
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder,self).__init__()
@@ -86,14 +88,14 @@ decoder = Decoder()
 
 batch_size = 100
 
-
+#Load the MNIST dataset via the DataLoader function of PyTorch
 mnist_train = dset.MNIST("./", train=True, transform=transforms.ToTensor(), target_transform=None, download=True)
 mnist_test  = dset.MNIST("./", train=False, transform=transforms.ToTensor(), target_transform=None, download=True)
 
 train_loader = torch.utils.data.DataLoader(dataset=mnist_train,batch_size=batch_size,shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=mnist_test,batch_size=batch_size,shuffle=True)
 
-
+#Convert the torch tensors to numpy arrays and stack them
 c = 0
 for images, labels in train_loader:
     if(c == 0):
@@ -117,19 +119,25 @@ for im, la in test_loader:
     c+=1
 
 
+# The random noise element of the image
 noise = torch.rand(batch_size, 1, 28, 28)
 
-
+#Store the numpy arrays as hdf5 datasets in a hdf5 file named mnistdataset
 f = h5py.File("mnistdataset.hdf5", "w")
 trainset_img = f.create_dataset("train_images", data=img_np_hdf_train)
 testset_img = f.create_dataset("test_images", data=img_np_hdf_test)
 
+
+#Set the hyperparameters
 epoch = 10
 learning_rate = 0.0005
 
+#Use the mean squared loss and Adam optimizer with default betas
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(list(encoder.parameters())+ list(decoder.parameters()), lr = learning_rate)
 
+
+#Train the model by sending noisy input into the encoder and taking loss against the original image in the decoder
 for i in range(epoch):
     for image,label in train_loader:
         image_n = torch.mul(image, noise)
@@ -146,7 +154,7 @@ for i in range(epoch):
         print(loss.data)
 
 
-
+#Find the loss in the test dataset
 for timage,tlabel in test_loader:
     test_img_n = torch.mul(timage, noise)
     timage = Variable(timage)
